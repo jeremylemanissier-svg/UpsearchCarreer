@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notre équipe — UpSearch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="equipe.html">
+<div id="header-mount"></div>
+
+<section class="hero small">
+  <div class="container">
+    <p class="eyebrow">L'équipe</p>
+    <h1>Les personnes derrière vos entretiens</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div id="team-list" class="grid grid-3">
+      <div class="empty">Chargement...</div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+async function init(){
+  const el = document.getElementById('team-list');
+  try{
+    const equipe = await api('GET','/api/data/equipe');
+    if(!equipe.length){ el.innerHTML = '<div class="empty">L\'équipe sera bientôt présentée ici.</div>'; return; }
+    el.innerHTML = equipe.map(p=>`
+      <div class="card team-card">
+        <div class="avatar">${p.photo?`<img src="${esc(p.photo)}" alt="${esc(p.nom)}">`:esc(initials(p.nom))}</div>
+        <p style="font-weight:600;margin:0">${esc(p.nom)}</p>
+        <p class="role">${esc(p.role||'')}</p>
+        ${p.citation?`<p class="quote">"${esc(p.citation)}"</p>`:''}
+      </div>`).join('');
+  }catch(e){ el.innerHTML = '<div class="empty">Équipe indisponible pour le moment.</div>'; }
+}
+function initials(name){
+  return (name||'').split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+}
+init();
+</script>
+</body>
+</html>

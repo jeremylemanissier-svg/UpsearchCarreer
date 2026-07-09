@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UpSearch — Recrutement CDI cadres BTP à Rouen et Amiens</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="index.html">
+<div id="header-mount"></div>
+
+<section class="hero">
+  <div class="container">
+    <p class="eyebrow">Réseau Alliance recrutement</p>
+    <h1>Construisez la suite de votre carrière</h1>
+    <p>Des postes cadres en BTP à Rouen et Amiens, portés par une équipe qui connaît votre secteur.</p>
+    <a href="offres.html" class="btn btn-white">Voir les offres →</a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-title">Offres à la une</div>
+    <div id="offres-une" class="grid grid-3">
+      <div class="empty">Chargement des offres...</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="cta-banner">
+      <h2>Prêt à passer à l'étape suivante ?</h2>
+      <a href="contact.html" class="btn btn-white">Envoyer une candidature spontanée</a>
+    </div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+async function loadOffres(){
+  const el = document.getElementById('offres-une');
+  try{
+    const offres = (await api('GET','/api/data/offres')).filter(o=>o.actif!==false).slice(0,3);
+    if(!offres.length){ el.innerHTML = '<div class="empty">Aucune offre publiée pour le moment.</div>'; return; }
+    el.innerHTML = offres.map(o=>`
+      <a href="offre.html?id=${o.id}" class="card card-hover" style="text-decoration:none;display:block">
+        <p class="tag">${esc(o.secteur||'—')}</p>
+        <h3 style="font-size:15px;font-weight:600;margin:0 0 8px">${esc(o.titre)}</h3>
+        <p style="font-size:13px;color:var(--text-soft);margin:0">📍 ${esc(o.ville||'—')}</p>
+      </a>`).join('');
+  }catch(e){ el.innerHTML = '<div class="empty">Offres indisponibles pour le moment.</div>'; }
+}
+loadOffres();
+</script>
+</body>
+</html>

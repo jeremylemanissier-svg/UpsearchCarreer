@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — UpSearch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="contact.html">
+<div id="header-mount"></div>
+
+<section class="hero small">
+  <div class="container">
+    <p class="eyebrow">Contact</p>
+    <h1>Parlons de votre prochaine étape</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+    <div>
+      <h3 style="font-size:16px;font-weight:600;margin:0 0 16px">Nos bureaux</h3>
+      <div id="offices" style="display:flex;flex-direction:column;gap:16px">
+        <div class="empty">Chargement...</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:600;margin:0 0 16px">Candidature spontanée</h3>
+      <form id="apply-form">
+        <div class="field-row">
+          <div class="field"><label>Prénom</label><input name="prenom" required></div>
+          <div class="field"><label>Nom</label><input name="nom" required></div>
+        </div>
+        <div class="field"><label>Email</label><input type="email" name="email" required></div>
+        <div class="field"><label>Téléphone</label><input type="tel" name="telephone"></div>
+        <div class="field">
+          <label>CV</label>
+          <div class="dropzone" id="dropzone">
+            <div id="dz-label">Déposez votre CV ou cliquez pour parcourir</div>
+          </div>
+          <input type="file" name="cv" id="cv-input" accept=".pdf,.doc,.docx" style="display:none">
+        </div>
+        <div class="field"><label>Message</label><textarea name="message" placeholder="Quel type de poste recherchez-vous ?"></textarea></div>
+        <button type="submit" class="btn btn-primary btn-block">Envoyer ma candidature</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+async function loadOffices(){
+  const el = document.getElementById('offices');
+  try{
+    const s = await api('GET','/api/data/settings');
+    const c = s.contact||{};
+    el.innerHTML = `
+      <div class="card">
+        <p style="font-weight:600;margin:0 0 6px">Rouen</p>
+        <p style="font-size:13px;color:var(--text-soft);margin:0;line-height:1.8">${esc(c.rouen_adresse||'—')}<br>${esc(c.rouen_tel||'')}<br>${c.rouen_email?`<a href="mailto:${esc(c.rouen_email)}" style="color:var(--brand)">${esc(c.rouen_email)}</a>`:''}</p>
+      </div>
+      <div class="card">
+        <p style="font-weight:600;margin:0 0 6px">Amiens</p>
+        <p style="font-size:13px;color:var(--text-soft);margin:0;line-height:1.8">${esc(c.amiens_adresse||'—')}<br>${esc(c.amiens_tel||'')}<br>${c.amiens_email?`<a href="mailto:${esc(c.amiens_email)}" style="color:var(--brand)">${esc(c.amiens_email)}</a>`:''}</p>
+      </div>`;
+  }catch(e){ el.innerHTML = '<div class="empty">Coordonnées indisponibles pour le moment.</div>'; }
+}
+loadOffices();
+
+const dz = document.getElementById('dropzone');
+const input = document.getElementById('cv-input');
+dz.addEventListener('click', ()=>input.click());
+input.addEventListener('change', ()=>{
+  if(input.files[0]) document.getElementById('dz-label').innerHTML = '📎 <span class="fname">'+esc(input.files[0].name)+'</span>';
+});
+document.getElementById('apply-form').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Envoi...';
+  const fd = new FormData(form);
+  try{
+    const res = await fetch('/api/candidatures', { method:'POST', body: fd });
+    if(!res.ok){ const e2 = await res.json().catch(()=>({})); throw new Error(e2.error||'Erreur lors de l\'envoi'); }
+    form.innerHTML = '<div style="text-align:center;padding:20px 0"><p style="font-size:32px;margin:0 0 10px">✓</p><p style="font-weight:600;margin:0 0 6px">Candidature envoyée</p><p style="font-size:13px;color:var(--text-soft)">Nous revenons vers vous rapidement.</p></div>';
+  }catch(err){
+    toast(err.message);
+    btn.disabled = false; btn.textContent = 'Envoyer ma candidature';
+  }
+});
+</script>
+</body>
+</html>

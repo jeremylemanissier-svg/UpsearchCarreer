@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offre d'emploi — UpSearch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="offres.html">
+<div id="header-mount"></div>
+
+<section class="section" style="padding-top:36px">
+  <div class="container">
+    <a href="offres.html" style="font-size:13px;color:var(--text-soft)">← Retour aux offres</a>
+    <div id="offer-detail" style="margin-top:18px">
+      <div class="empty">Chargement de l'offre...</div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+let OFFRE = null;
+
+async function init(){
+  const id = qs('id');
+  const el = document.getElementById('offer-detail');
+  if(!id){ el.innerHTML = '<div class="empty">Offre introuvable.</div>'; return; }
+  try{
+    const offres = await api('GET','/api/data/offres');
+    OFFRE = offres.find(o=>o.id===id);
+  }catch(e){ /* affichage du message d'erreur ci-dessous */ }
+  if(!OFFRE){ el.innerHTML = '<div class="empty">Cette offre n\'existe plus ou a été pourvue.</div>'; return; }
+  document.title = OFFRE.titre + ' — UpSearch';
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:32px;align-items:start">
+      <div>
+        <p class="tag" style="font-size:12px;color:var(--text-mute)">${esc(OFFRE.secteur||'—')}${OFFRE.type_contrat?' · '+esc(OFFRE.type_contrat):''}</p>
+        <h1 style="font-size:26px;font-weight:700;margin:6px 0 10px">${esc(OFFRE.titre)}</h1>
+        <p style="font-size:14px;color:var(--text-soft);margin:0 0 24px">📍 ${esc(OFFRE.ville||'—')}${OFFRE.salaire?' · 💰 '+esc(OFFRE.salaire):''}</p>
+        <div style="white-space:pre-wrap;font-size:14px;line-height:1.8">${esc(OFFRE.description||'')}</div>
+      </div>
+      <div class="card" id="apply-card">
+        <h3 style="font-size:15px;font-weight:600;margin:0 0 16px">Postuler à cette offre</h3>
+        <form id="apply-form">
+          <div class="field-row">
+            <div class="field"><label>Prénom</label><input name="prenom" required></div>
+            <div class="field"><label>Nom</label><input name="nom" required></div>
+          </div>
+          <div class="field"><label>Email</label><input type="email" name="email" required></div>
+          <div class="field"><label>Téléphone</label><input type="tel" name="telephone"></div>
+          <div class="field">
+            <label>CV</label>
+            <div class="dropzone" id="dropzone">
+              <div id="dz-label">Déposez votre CV ou cliquez pour parcourir</div>
+            </div>
+            <input type="file" name="cv" id="cv-input" accept=".pdf,.doc,.docx" style="display:none">
+          </div>
+          <div class="field"><label>Message (optionnel)</label><textarea name="message"></textarea></div>
+          <button type="submit" class="btn btn-primary btn-block">Envoyer ma candidature</button>
+        </form>
+      </div>
+    </div>`;
+  wireForm();
+}
+
+function wireForm(){
+  const dz = document.getElementById('dropzone');
+  const input = document.getElementById('cv-input');
+  dz.addEventListener('click', ()=>input.click());
+  input.addEventListener('change', ()=>{
+    if(input.files[0]) document.getElementById('dz-label').innerHTML = '📎 <span class="fname">'+esc(input.files[0].name)+'</span>';
+  });
+  document.getElementById('apply-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'Envoi...';
+    const fd = new FormData(form);
+    fd.append('offre_id', OFFRE.id);
+    fd.append('offre_titre', OFFRE.titre);
+    try{
+      const res = await fetch('/api/candidatures', { method:'POST', body: fd });
+      if(!res.ok){ const e2 = await res.json().catch(()=>({})); throw new Error(e2.error||'Erreur lors de l\'envoi'); }
+      document.getElementById('apply-card').innerHTML = '<div style="text-align:center;padding:20px 0"><p style="font-size:32px;margin:0 0 10px">✓</p><p style="font-weight:600;margin:0 0 6px">Candidature envoyée</p><p style="font-size:13px;color:var(--text-soft)">Nous revenons vers vous rapidement.</p></div>';
+    }catch(err){
+      toast(err.message);
+      btn.disabled = false; btn.textContent = 'Envoyer ma candidature';
+    }
+  });
+}
+init();
+</script>
+</body>
+</html>

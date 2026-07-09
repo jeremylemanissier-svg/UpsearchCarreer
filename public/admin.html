@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administration — UpSearch Carrières</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body{background:var(--bg);}
+  .admin-header{background:var(--brand);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .admin-header img{height:32px;}
+  .admin-tabs{display:flex;gap:4px;background:#fff;border-bottom:1px solid var(--border);padding:0 24px;overflow-x:auto;}
+  .admin-tab{padding:14px 16px;font-size:13px;font-weight:600;color:var(--text-soft);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+  .admin-tab.active{color:var(--brand);border-color:var(--brand);}
+  .admin-body{max-width:960px;margin:0 auto;padding:28px 24px;}
+  .row-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+  .row-item .actions{display:flex;gap:6px;flex-shrink:0;}
+  .icon-btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:13px;}
+  .icon-btn:hover{background:var(--bg);}
+  .form-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+  .badge-off{background:#fdeaea;color:#a33;font-size:11px;padding:2px 8px;border-radius:10px;}
+  .badge-on{background:#e6f7ec;color:#1a7a42;font-size:11px;padding:2px 8px;border-radius:10px;}
+  #login-screen{max-width:340px;margin:80px auto;text-align:center;}
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="display:none">
+  <img src="img/logo.png" style="height:56px;margin:0 auto 24px">
+  <div class="card" style="text-align:left">
+    <h3 style="margin:0 0 16px;font-size:15px">Espace administrateur</h3>
+    <div class="field"><label>Mot de passe</label><input type="password" id="login-password"></div>
+    <button class="btn btn-primary btn-block" onclick="doLogin()">Se connecter</button>
+  </div>
+</div>
+
+<div id="admin-app" style="display:none">
+  <div class="admin-header">
+    <img src="img/logo-white.png" alt="UpSearch">
+    <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="doLogout()">Se déconnecter</button>
+  </div>
+  <div class="admin-tabs" id="admin-tabs"></div>
+  <div class="admin-body" id="admin-body"></div>
+</div>
+
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

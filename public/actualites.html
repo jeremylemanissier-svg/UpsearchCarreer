@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Actualités — UpSearch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="actualites.html">
+<div id="header-mount"></div>
+
+<section class="hero small">
+  <div class="container">
+    <p class="eyebrow">Actualités</p>
+    <h1>Conseils carrière et actus du cabinet</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div id="news-list" class="grid grid-3">
+      <div class="empty">Chargement...</div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+let ITEMS = [];
+async function init(){
+  const el = document.getElementById('news-list');
+  try{
+    ITEMS = (await api('GET','/api/data/actualites')).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+    if(!ITEMS.length){ el.innerHTML = '<div class="empty">Aucune actualité publiée pour le moment.</div>'; return; }
+    el.innerHTML = ITEMS.map((a,i)=>`
+      <div class="card news-card card-hover" style="cursor:pointer" onclick="toggle(${i})">
+        <div class="thumb" style="${a.image?`background-image:url('${esc(a.image)}');background-size:cover;background-position:center`:''}"></div>
+        <div class="body">
+          <p class="date">${esc(a.categorie||'Article')} · ${formatDate(a.created_at)}</p>
+          <h3>${esc(a.titre)}</h3>
+          <div id="full-${i}" style="display:none;font-size:13px;color:var(--text-soft);margin-top:10px;white-space:pre-wrap">${esc(a.contenu||'')}</div>
+        </div>
+      </div>`).join('');
+  }catch(e){ el.innerHTML = '<div class="empty">Actualités indisponibles pour le moment.</div>'; }
+}
+function toggle(i){
+  const el = document.getElementById('full-'+i);
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Témoignages — UpSearch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="temoignages.html">
+<div id="header-mount"></div>
+
+<section class="hero small">
+  <div class="container">
+    <p class="eyebrow">Témoignages</p>
+    <h1>Ils nous ont fait confiance</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div id="quotes-list" class="grid grid-2">
+      <div class="empty">Chargement...</div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+async function init(){
+  const el = document.getElementById('quotes-list');
+  try{
+    const items = await api('GET','/api/data/temoignages');
+    if(!items.length){ el.innerHTML = '<div class="empty">Les premiers témoignages arrivent bientôt.</div>'; return; }
+    el.innerHTML = items.map(t=>`
+      <div class="card quote-card">
+        <i>&#8220;</i>
+        <p class="txt">${esc(t.citation)}</p>
+        <p class="author">${esc(t.nom)}</p>
+        <p class="role">${esc(t.role||'')}</p>
+      </div>`).join('');
+  }catch(e){ el.innerHTML = '<div class="empty">Témoignages indisponibles pour le moment.</div>'; }
+}
+init();
+</script>
+</body>
+</html>
