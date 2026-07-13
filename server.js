@@ -20,7 +20,7 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const ALLOWED_FILES = new Set([
   'offres.json', 'equipe.json', 'actualites.json',
-  'temoignages.json', 'candidatures.json', 'settings.json'
+  'temoignages.json', 'candidatures.json', 'settings.json', 'media.json'
 ]);
 
 function genId() { return crypto.randomBytes(6).toString('hex'); }
@@ -42,14 +42,26 @@ function seed() {
   if (!fs.existsSync(path.join(DATA_DIR, 'actualites.json'))) writeJSON('actualites.json', []);
   if (!fs.existsSync(path.join(DATA_DIR, 'temoignages.json'))) writeJSON('temoignages.json', []);
   if (!fs.existsSync(path.join(DATA_DIR, 'candidatures.json'))) writeJSON('candidatures.json', []);
+  if (!fs.existsSync(path.join(DATA_DIR, 'media.json'))) writeJSON('media.json', []);
   if (!fs.existsSync(path.join(DATA_DIR, 'settings.json'))) {
     writeJSON('settings.json', {
       admin_password_hash: bcrypt.hashSync(ADMIN_PASSWORD, 10),
       contact: {
         rouen_tel: '', rouen_email: '', rouen_adresse: '',
         amiens_tel: '', amiens_email: '', amiens_adresse: ''
+      },
+      hero_bg: {
+        accueil: '', offres: '', equipe: '', actualites: '', temoignages: '', contact: ''
       }
     });
+  } else if (process.env.RESET_ADMIN_PASSWORD) {
+    // Filet de secours en cas de mot de passe oublié : definir la variable d'environnement
+    // RESET_ADMIN_PASSWORD sur Railway puis redemarrer le service reinitialise le mot de passe.
+    // A retirer ensuite pour eviter qu'un redemarrage futur ne le reinitialise a nouveau.
+    const settings = readJSON('settings.json', {});
+    settings.admin_password_hash = bcrypt.hashSync(process.env.RESET_ADMIN_PASSWORD, 10);
+    writeJSON('settings.json', settings);
+    console.log('[BOOT] Mot de passe administrateur reinitialise via RESET_ADMIN_PASSWORD.');
   }
 }
 seed();
@@ -114,6 +126,12 @@ app.put('/api/settings/contact', auth, (req, res) => {
   writeJSON('settings.json', settings);
   res.json({ ok: true });
 });
+app.put('/api/settings/hero-bg', auth, (req, res) => {
+  const settings = readJSON('settings.json', {});
+  settings.hero_bg = { ...settings.hero_bg, ...req.body };
+  writeJSON('settings.json', settings);
+  res.json({ ok: true });
+});
 
 // ── CRUD generique pour offres / equipe / actualites / temoignages ──
 function crud(collection) {
@@ -152,7 +170,28 @@ const upload = multer({
 
 app.post('/api/upload-image', auth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
-  res.json({ url: '/uploads/' + req.file.filename });
+  const url = '/uploads/' + req.file.filename;
+  const media = readJSON('media.json', []);
+  media.unshift({ id: genId(), url, name: req.file.originalname || req.file.filename, uploaded_at: new Date().toISOString() });
+  writeJSON('media.json', media);
+  res.json({ url });
+});
+
+// ── Médiathèque : parcourir / supprimer les images déjà envoyées ──
+app.get('/api/media', auth, (req, res) => {
+  res.json(readJSON('media.json', []));
+});
+app.delete('/api/media/:id', auth, (req, res) => {
+  const media = readJSON('media.json', []);
+  const item = media.find(m => m.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'Introuvable' });
+  const filename = item.url.split('/uploads/')[1];
+  if (filename) {
+    const filePath = path.join(UPLOADS_DIR, filename);
+    if (fs.existsSync(filePath)) { try { fs.unlinkSync(filePath); } catch (e) { /* fichier deja absent, on continue */ } }
+  }
+  writeJSON('media.json', media.filter(m => m.id !== req.params.id));
+  res.json({ ok: true });
 });
 
 // ── Candidatures : creation publique, lecture/suppression admin ──
