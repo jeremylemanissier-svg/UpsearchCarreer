@@ -36,7 +36,9 @@ img{max-width:100%;display:block;}
 .burger{display:none;background:none;border:none;font-size:24px;color:var(--brand);cursor:pointer;}
 
 /* ── Hero ── */
-.hero{background:var(--brand);color:#fff;padding:64px 0;}
+.hero{background:var(--brand);color:#fff;padding:64px 0;position:relative;background-size:cover;background-position:center;}
+.hero.has-bg::before{content:"";position:absolute;inset:0;background:rgba(9,78,105,.72);}
+.hero .container{position:relative;z-index:1;}
 .hero .eyebrow{font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--accent-blue);text-transform:uppercase;margin:0 0 12px;}
 .hero h1{font-size:38px;font-weight:700;margin:0 0 16px;max-width:560px;line-height:1.2;}
 .hero p{font-size:16px;color:#cfe4ea;max-width:520px;margin:0 0 28px;}
