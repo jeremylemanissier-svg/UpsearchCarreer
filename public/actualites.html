@@ -40,7 +40,7 @@ async function init(){
         <div class="body">
           <p class="date">${esc(a.categorie||'Article')} · ${formatDate(a.created_at)}</p>
           <h3>${esc(a.titre)}</h3>
-          <div id="full-${i}" style="display:none;font-size:13px;color:var(--text-soft);margin-top:10px;white-space:pre-wrap">${esc(a.contenu||'')}</div>
+          <div id="full-${i}" style="display:none;font-size:13px;color:var(--text-soft);margin-top:10px">${renderRichText(a.contenu||'')}</div>
         </div>
       </div>`).join('');
   }catch(e){ el.innerHTML = '<div class="empty">Actualités indisponibles pour le moment.</div>'; }
