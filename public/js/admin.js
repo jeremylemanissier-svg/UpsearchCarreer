@@ -3,6 +3,7 @@ const TABS = [
   { key: 'equipe', label: 'Équipe' },
   { key: 'actualites', label: 'Actualités' },
   { key: 'temoignages', label: 'Témoignages' },
+  { key: 'media', label: 'Médiathèque' },
   { key: 'candidatures', label: 'Candidatures' },
   { key: 'parametres', label: 'Paramètres' }
 ];
@@ -20,7 +21,7 @@ const SCHEMAS = {
       { name: 'type_contrat', label: 'Type de contrat', type: 'text', placeholder: 'CDI, CDD...' },
       { name: 'salaire', label: 'Rémunération (optionnel)', type: 'text' },
       { name: 'urgent', label: 'Mettre en avant "à pourvoir rapidement"', type: 'checkbox' },
-      { name: 'accroche', label: 'Accroche (1-2 phrases qui donnent envie, sous le bandeau)', type: 'textarea', placeholder: 'Rejoignez une équipe en forte croissance...' },
+      { name: 'accroche', label: 'Accroche (1-2 phrases qui donnent envie, sous le bandeau)', type: 'textarea', placeholder: 'Rejoignez une équipe en forte croissance...', hint: 'Astuce : insère une image avec ![](adresse copiée depuis la Médiathèque)' },
       { name: 'stat1_label', label: 'Chiffre clé 1 — libellé', type: 'text', placeholder: 'ex: Effectif agence' },
       { name: 'stat1_value', label: 'Chiffre clé 1 — valeur', type: 'text', placeholder: 'ex: 80 personnes' },
       { name: 'stat2_label', label: 'Chiffre clé 2 — libellé', type: 'text' },
@@ -30,7 +31,7 @@ const SCHEMAS = {
       { name: 'missions', label: 'Missions (une par ligne)', type: 'textarea', hint: 'Une ligne = une mission affichée avec ✓' },
       { name: 'profil', label: 'Profil recherché (une caractéristique par ligne)', type: 'textarea', hint: 'Une ligne = une pastille affichée' },
       { name: 'avantages', label: 'Avantages (un par ligne)', type: 'textarea', hint: 'Une ligne = un avantage listé' },
-      { name: 'description', label: 'Informations complémentaires (optionnel)', type: 'textarea', hint: 'Texte libre affiché en bas de l\'annonce, sous les autres sections' },
+      { name: 'description', label: 'Informations complémentaires (optionnel)', type: 'textarea', hint: 'Texte libre affiché en bas de l\'annonce. Astuce : insère une image avec ![](adresse copiée depuis la Médiathèque)' },
       { name: 'actif', label: 'Offre publiée sur le site', type: 'checkbox', default: true }
     ],
     renderRow: (item) => `
@@ -60,7 +61,7 @@ const SCHEMAS = {
     fields: [
       { name: 'titre', label: 'Titre', type: 'text', required: true },
       { name: 'categorie', label: 'Catégorie', type: 'text', placeholder: 'Article, Actualité...' },
-      { name: 'contenu', label: 'Contenu', type: 'textarea' },
+      { name: 'contenu', label: 'Contenu', type: 'textarea', hint: 'Astuce : insère une image avec ![](adresse copiée depuis la Médiathèque)' },
       { name: 'image', label: 'Image (optionnel)', type: 'image' }
     ],
     renderRow: (item) => `
@@ -122,6 +123,7 @@ function selectTab(key) {
   renderTabs();
   if (key === 'candidatures') renderCandidatures();
   else if (key === 'parametres') renderParametres();
+  else if (key === 'media') renderMedia();
   else renderCollection(key);
 }
 
@@ -258,10 +260,61 @@ async function deleteCandidature(id) {
   catch (e) { toast(e.message); }
 }
 
+async function renderMedia() {
+  const body = document.getElementById('admin-body');
+  body.innerHTML = '<div class="empty">Chargement...</div>';
+  const items = await api('GET', '/api/media');
+  body.innerHTML = `
+    <h2 style="font-size:18px;margin:0 0 6px">Médiathèque</h2>
+    <p style="font-size:13px;color:var(--text-soft);margin:0 0 16px">Envoie une image ici, copie son adresse, puis colle-la où tu veux : dans un champ "Photo/Image", dans les images de fond des bandeaux (onglet Paramètres), ou dans n'importe quel texte libre avec <code>![](adresse-copiée)</code>.</p>
+    <div class="form-panel">
+      <input type="file" accept="image/*" id="media-upload-inp" onchange="uploadToMedia(this)">
+      <div id="media-upload-status" style="font-size:12px;color:var(--text-soft);margin-top:8px"></div>
+    </div>
+    <div id="media-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
+      ${items.length ? items.map(m => mediaCardHtml(m)).join('') : '<div class="empty">Aucune image envoyée pour le moment.</div>'}
+    </div>
+  `;
+}
+function mediaCardHtml(m) {
+  return `<div class="row-item" style="flex-direction:column;align-items:stretch;padding:8px" id="media-${m.id}">
+    <img src="${esc(m.url)}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;margin-bottom:8px">
+    <p style="font-size:11px;color:var(--text-soft);margin:0 0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name || '')}</p>
+    <div style="display:flex;gap:6px">
+      <button class="icon-btn" style="flex:1" onclick="copyMediaUrl('${esc(m.url)}')">Copier l'adresse</button>
+      <button class="icon-btn" onclick="deleteMedia('${m.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+async function uploadToMedia(inp) {
+  const file = inp.files[0]; if (!file) return;
+  const statusEl = document.getElementById('media-upload-status');
+  statusEl.textContent = 'Envoi...';
+  const fd = new FormData(); fd.append('image', file);
+  try {
+    const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('Échec de l\'envoi');
+    statusEl.textContent = '';
+    inp.value = '';
+    toast('✓ Image ajoutée à la médiathèque');
+    renderMedia();
+  } catch (e) { statusEl.textContent = ''; toast(e.message); }
+}
+function copyMediaUrl(url) {
+  const fullUrl = window.location.origin + url;
+  navigator.clipboard.writeText(fullUrl).then(() => toast('✓ Adresse copiée')).catch(() => toast('Impossible de copier automatiquement — sélectionne l\'adresse manuellement.'));
+}
+async function deleteMedia(id) {
+  if (!confirm('Supprimer cette image ? Elle disparaîtra de partout où elle est utilisée sur le site.')) return;
+  try { await api('DELETE', `/api/media/${id}`); toast('✓ Supprimée'); renderMedia(); }
+  catch (e) { toast(e.message); }
+}
+
 async function renderParametres() {
   const body = document.getElementById('admin-body');
   const settings = await api('GET', '/api/data/settings');
   const c = settings.contact || {};
+  const hb = settings.hero_bg || {};
   body.innerHTML = `
     <h2 style="font-size:18px;margin:0 0 16px">Paramètres</h2>
     <div class="form-panel">
@@ -283,6 +336,20 @@ async function renderParametres() {
       </form>
     </div>
     <div class="form-panel">
+      <h3 style="font-size:14px;margin:0 0 6px">Images de fond des bandeaux</h3>
+      <p style="font-size:12px;color:var(--text-soft);margin:0 0 14px">Optionnel — sans image, le bandeau reste en couleur unie comme aujourd'hui.</p>
+      <form id="herobg-form">
+        ${['accueil','offres','equipe','actualites','temoignages','contact'].map(page => `
+          <div class="field">
+            <label>${page.charAt(0).toUpperCase()+page.slice(1)}</label>
+            <input type="hidden" name="${page}" value="${esc(hb[page]||'')}" id="herobg-${page}">
+            <input type="file" accept="image/*" onchange="uploadImage(this,'herobg-${page}')">
+            ${hb[page] ? `<img src="${esc(hb[page])}" style="height:50px;margin-top:8px;border-radius:6px">` : ''}
+          </div>`).join('')}
+        <button type="submit" class="btn btn-primary">Enregistrer les images de fond</button>
+      </form>
+    </div>
+    <div class="form-panel">
       <h3 style="font-size:14px;margin:0 0 14px">Changer le mot de passe administrateur</h3>
       <form id="password-form">
         <div class="field"><label>Nouveau mot de passe (6 caractères minimum)</label><input type="password" name="newPassword" minlength="6" required></div>
@@ -295,6 +362,13 @@ async function renderParametres() {
     const fd = new FormData(e.target);
     const payload = Object.fromEntries(fd.entries());
     try { await api('PUT', '/api/settings/contact', payload); toast('✓ Coordonnées enregistrées'); }
+    catch (err) { toast(err.message); }
+  });
+  document.getElementById('herobg-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const payload = Object.fromEntries(fd.entries());
+    try { await api('PUT', '/api/settings/hero-bg', payload); toast('✓ Images de fond enregistrées'); renderParametres(); }
     catch (err) { toast(err.message); }
   });
   document.getElementById('password-form').addEventListener('submit', async (e) => {
