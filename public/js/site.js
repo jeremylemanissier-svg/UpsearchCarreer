@@ -4,6 +4,17 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+// Texte libre avec prise en charge d'une syntaxe simple pour insérer une image :
+// ![texte alternatif](adresse-de-l-image) -- l'adresse vient de la Médiathèque (admin).
+// Le texte est d'abord entièrement échappé (sécurité), puis ce seul motif est transformé en <img>.
+function renderRichText(s) {
+  let html = esc(s);
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, url) => {
+    if (!/^(https?:\/\/|\/uploads\/)/.test(url)) return m;
+    return `<img src="${url}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:14px 0;display:block">`;
+  });
+  return html.replace(/\n/g, '<br>');
+}
 function toast(msg) {
   const t = document.getElementById('toast');
   if (!t) return;
@@ -96,12 +107,25 @@ async function mountLayout(active) {
       document.getElementById('nav-links').classList.toggle('open');
     });
   }
-  if (fm) {
-    let contact = {};
-    try { const s = await api('GET', '/api/data/settings'); contact = s.contact || {}; }
-    catch (e) { /* pied de page affiche quand meme, sans coordonnees */ }
-    fm.innerHTML = renderFooter(contact);
-  }
+  let settings = {};
+  try { settings = await api('GET', '/api/data/settings'); } catch (e) { /* pied de page et fond affiches sans ces donnees */ }
+  if (fm) fm.innerHTML = renderFooter(settings.contact || {});
+  applyHeroBg(settings.hero_bg || {});
+}
+
+const HERO_BG_KEY_BY_PAGE = {
+  'index.html': 'accueil', 'offres.html': 'offres', 'offre.html': 'offres',
+  'equipe.html': 'equipe', 'actualites.html': 'actualites',
+  'temoignages.html': 'temoignages', 'contact.html': 'contact'
+};
+function applyHeroBg(heroBg) {
+  const page = document.body.dataset.page || '';
+  const key = HERO_BG_KEY_BY_PAGE[page];
+  const url = key ? heroBg[key] : '';
+  const heroEl = document.querySelector('.hero, .offer-hero');
+  if (!heroEl || !url) return;
+  heroEl.style.backgroundImage = `url('${url}')`;
+  heroEl.classList.add('has-bg');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
