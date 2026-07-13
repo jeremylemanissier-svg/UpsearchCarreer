@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offre d'emploi — UpSearch</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+.offer-hero{background:var(--brand);padding:44px 0;}
+.offer-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.14);color:#fff;font-size:12px;padding:5px 13px;border-radius:20px;}
+.offer-badge.urgent{background:#fff;color:var(--brand);font-weight:600;}
+.offer-stats{display:grid;gap:12px;margin:28px 0;}
+.offer-stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;}
+.offer-stat .val{font-size:15px;font-weight:700;margin:4px 0 0;}
+.offer-stat .lbl{font-size:12px;color:var(--text-soft);margin:0;}
+.mission-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;}
+.mission-row .tick{color:var(--brand);font-weight:700;flex-shrink:0;}
+.profil-pill{display:inline-block;background:var(--brand-light);color:var(--brand);font-size:12.5px;padding:6px 14px;border-radius:20px;margin:0 6px 8px 0;}
+.avantage-row{display:flex;gap:9px;align-items:center;font-size:13.5px;margin-bottom:8px;}
+.avantage-row .dot{color:var(--text-mute);}
+</style>
+</head>
+<body data-page="offres.html">
+<div id="header-mount"></div>
+
+<div id="offer-content">
+  <div style="text-align:center;padding:80px 0;color:var(--text-mute)">Chargement de l'offre...</div>
+</div>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+let OFFRE = null;
+
+async function init(){
+  const id = qs('id');
+  const el = document.getElementById('offer-content');
+  if(!id){ el.innerHTML = '<div class="container"><div class="empty">Offre introuvable.</div></div>'; return; }
+  try{
+    const offres = await api('GET','/api/data/offres');
+    OFFRE = offres.find(o=>o.id===id);
+  }catch(e){ /* le message d'erreur ci-dessous couvre ce cas */ }
+  if(!OFFRE){ el.innerHTML = '<div class="container"><div class="empty">Cette offre n\'existe plus ou a été pourvue.</div></div>'; return; }
+  document.title = OFFRE.titre + ' — UpSearch';
+
+  const missions = (OFFRE.missions||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const profil = (OFFRE.profil||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const avantages = (OFFRE.avantages||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const stats = [
+    {lbl:OFFRE.stat1_label, val:OFFRE.stat1_value},
+    {lbl:OFFRE.stat2_label, val:OFFRE.stat2_value},
+    {lbl:OFFRE.stat3_label, val:OFFRE.stat3_value}
+  ].filter(s=>s.lbl&&s.val);
+
+  el.innerHTML = `
+    <section class="offer-hero">
+      <div class="container">
+        <p style="font-size:12px;font-weight:600;color:var(--accent-blue);letter-spacing:.06em;margin:0 0 10px;text-transform:uppercase">${esc(OFFRE.secteur||'')}${OFFRE.entreprise?' · '+esc(OFFRE.entreprise):''}</p>
+        <h1 style="font-size:28px;font-weight:700;color:#fff;margin:0 0 16px">${esc(OFFRE.titre)}</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
+          ${OFFRE.ville?`<span class="offer-badge">📍 ${esc(OFFRE.ville)}</span>`:''}
+          ${OFFRE.type_contrat?`<span class="offer-badge">💼 ${esc(OFFRE.type_contrat)}</span>`:''}
+          ${OFFRE.salaire?`<span class="offer-badge">💰 ${esc(OFFRE.salaire)}</span>`:''}
+          ${OFFRE.urgent?`<span class="offer-badge urgent">⚡ Poste à pourvoir rapidement</span>`:''}
+        </div>
+        <button class="btn btn-white" onclick="document.getElementById('apply-section').scrollIntoView({behavior:'smooth'})">Postuler maintenant →</button>
+      </div>
+    </section>
+
+    <div class="container">
+      ${OFFRE.accroche?`<p style="font-size:16px;line-height:1.75;margin:28px 0 0;max-width:760px">${esc(OFFRE.accroche)}</p>`:''}
+
+      ${stats.length?`<div class="offer-stats" style="grid-template-columns:repeat(${stats.length},1fr)">
+        ${stats.map(s=>`<div class="offer-stat"><p class="lbl">${esc(s.lbl)}</p><p class="val">${esc(s.val)}</p></div>`).join('')}
+      </div>`:'<div style="margin-top:28px"></div>'}
+
+      ${missions.length?`<div style="margin:32px 0;max-width:760px">
+        <h3 style="font-size:17px;font-weight:700;margin:0 0 14px">Vos missions</h3>
+        ${missions.map(m=>`<div class="mission-row"><span class="tick">✓</span><p style="margin:0;font-size:14.5px;line-height:1.6">${esc(m)}</p></div>`).join('')}
+      </div>`:''}
+
+      ${profil.length?`<div style="margin:0 0 32px">
+        <h3 style="font-size:17px;font-weight:700;margin:0 0 14px">Profil recherché</h3>
+        <div>${profil.map(p=>`<span class="profil-pill">${esc(p)}</span>`).join('')}</div>
+      </div>`:''}
+
+      ${avantages.length?`<div style="margin:0 0 40px;max-width:520px">
+        <h3 style="font-size:17px;font-weight:700;margin:0 0 14px">Ce que vous obtenez</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">
+          ${avantages.map(a=>`<div class="avantage-row"><span class="dot">•</span><span>${esc(a)}</span></div>`).join('')}
+        </div>
+      </div>`:''}
+
+      ${OFFRE.description?`<div style="margin:0 0 40px;max-width:760px;white-space:pre-wrap;font-size:14px;line-height:1.8;color:var(--text-soft)">${esc(OFFRE.description)}</div>`:''}
+    </div>
+
+    <div class="cta-banner" style="border-radius:0;margin:0">
+      <h2 style="margin:0 0 6px">Ce poste est fait pour vous ?</h2>
+      <p style="font-size:13px;color:#cfe4ea;margin:0">Réponse sous 48h après votre candidature.</p>
+    </div>
+
+    <div class="container">
+      <div class="card" id="apply-section" style="max-width:520px;margin:36px auto">
+        <h3 style="font-size:15px;font-weight:600;margin:0 0 16px">Postuler à cette offre</h3>
+        <form id="apply-form">
+          <div class="field-row">
+            <div class="field"><label>Prénom</label><input name="prenom" required></div>
+            <div class="field"><label>Nom</label><input name="nom" required></div>
+          </div>
+          <div class="field"><label>Email</label><input type="email" name="email" required></div>
+          <div class="field"><label>Téléphone</label><input type="tel" name="telephone"></div>
+          <div class="field">
+            <label>CV</label>
+            <div class="dropzone" id="dropzone">
+              <div id="dz-label">Déposez votre CV ou cliquez pour parcourir</div>
+            </div>
+            <input type="file" name="cv" id="cv-input" accept=".pdf,.doc,.docx" style="display:none">
+          </div>
+          <div class="field"><label>Message (optionnel)</label><textarea name="message"></textarea></div>
+          <button type="submit" class="btn btn-primary btn-block">Envoyer ma candidature</button>
+        </form>
+      </div>
+    </div>
+  `;
+  wireForm();
+}
+
+function wireForm(){
+  const dz = document.getElementById('dropzone');
+  const input = document.getElementById('cv-input');
+  dz.addEventListener('click', ()=>input.click());
+  input.addEventListener('change', ()=>{
+    if(input.files[0]) document.getElementById('dz-label').innerHTML = '📎 <span class="fname">'+esc(input.files[0].name)+'</span>';
+  });
+  document.getElementById('apply-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'Envoi...';
+    const fd = new FormData(form);
+    fd.append('offre_id', OFFRE.id);
+    fd.append('offre_titre', OFFRE.titre);
+    try{
+      const res = await fetch('/api/candidatures', { method:'POST', body: fd });
+      if(!res.ok){ const e2 = await res.json().catch(()=>({})); throw new Error(e2.error||'Erreur lors de l\'envoi'); }
+      document.getElementById('apply-section').innerHTML = '<div style="text-align:center;padding:20px 0"><p style="font-size:32px;margin:0 0 10px">✓</p><p style="font-weight:600;margin:0 0 6px">Candidature envoyée</p><p style="font-size:13px;color:var(--text-soft)">Nous revenons vers vous rapidement.</p></div>';
+    }catch(err){
+      toast(err.message);
+      btn.disabled = false; btn.textContent = 'Envoyer ma candidature';
+    }
+  });
+}
+init();
+</script>
+</body>
+</html>

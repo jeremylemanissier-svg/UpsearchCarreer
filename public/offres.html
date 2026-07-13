@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nos offres d'emploi — UpSearch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="offres.html">
+<div id="header-mount"></div>
+
+<section class="hero small">
+  <div class="container">
+    <p class="eyebrow">Carrières</p>
+    <h1>Nos offres d'emploi</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div style="margin-bottom:20px">
+      <input type="search" id="search" placeholder="Rechercher un poste, une ville...">
+    </div>
+    <div class="layout-with-filters">
+      <aside class="filters">
+        <h4>Filtres</h4>
+        <label>Métier</label>
+        <select id="f-metier"><option value="">Tous</option></select>
+        <label>Ville</label>
+        <select id="f-ville"><option value="">Toutes</option></select>
+        <label>Secteur</label>
+        <select id="f-secteur"><option value="">Tous</option></select>
+        <label>Type de contrat</label>
+        <select id="f-contrat"><option value="">Tous</option></select>
+        <button class="btn btn-outline btn-block" onclick="resetFilters()">Réinitialiser</button>
+      </aside>
+      <div>
+        <p id="count" style="font-size:13px;color:var(--text-soft);margin:0 0 14px"></p>
+        <div id="job-list" style="display:flex;flex-direction:column;gap:12px">
+          <div class="empty">Chargement des offres...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="cta-banner">
+      <h2>Prêt à passer à l'étape suivante ?</h2>
+      <a href="contact.html" class="btn btn-white">Envoyer une candidature spontanée</a>
+    </div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+<div id="toast"></div>
+<script src="js/site.js"></script>
+<script>
+let ALL_OFFRES = [];
+
+async function init(){
+  try{
+    ALL_OFFRES = (await api('GET','/api/data/offres')).filter(o=>o.actif!==false);
+  }catch(e){ ALL_OFFRES = []; }
+  fillFilterOptions();
+  render();
+  document.getElementById('search').addEventListener('input', render);
+  ['f-metier','f-ville','f-secteur','f-contrat'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', render);
+  });
+}
+
+function fillFilterOptions(){
+  const metiers = [...new Set(ALL_OFFRES.map(o=>o.metier).filter(Boolean))].sort();
+  const villes = [...new Set(ALL_OFFRES.map(o=>o.ville).filter(Boolean))].sort();
+  const secteurs = [...new Set(ALL_OFFRES.map(o=>o.secteur).filter(Boolean))].sort();
+  const contrats = [...new Set(ALL_OFFRES.map(o=>o.type_contrat).filter(Boolean))].sort();
+  document.getElementById('f-metier').innerHTML = '<option value="">Tous</option>' + metiers.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  document.getElementById('f-ville').innerHTML = '<option value="">Toutes</option>' + villes.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  document.getElementById('f-secteur').innerHTML = '<option value="">Tous</option>' + secteurs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  document.getElementById('f-contrat').innerHTML = '<option value="">Tous</option>' + contrats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+function resetFilters(){
+  document.getElementById('search').value='';
+  document.getElementById('f-metier').value='';
+  document.getElementById('f-ville').value='';
+  document.getElementById('f-secteur').value='';
+  document.getElementById('f-contrat').value='';
+  render();
+}
+
+function render(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const fMetier = document.getElementById('f-metier').value;
+  const fVille = document.getElementById('f-ville').value;
+  const fSecteur = document.getElementById('f-secteur').value;
+  const fContrat = document.getElementById('f-contrat').value;
+
+  let res = ALL_OFFRES.filter(o=>{
+    if(fMetier && o.metier!==fMetier) return false;
+    if(fVille && o.ville!==fVille) return false;
+    if(fSecteur && o.secteur!==fSecteur) return false;
+    if(fContrat && o.type_contrat!==fContrat) return false;
+    if(q){
+      const hay = [o.titre,o.ville,o.metier,o.secteur].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('count').textContent = res.length + ' offre' + (res.length>1?'s':'');
+  const list = document.getElementById('job-list');
+  if(!res.length){ list.innerHTML = '<div class="empty">Aucune offre ne correspond à ces critères.</div>'; return; }
+  list.innerHTML = res.map(o=>`
+    <a href="offre.html?id=${o.id}" class="job-card" style="text-decoration:none;color:inherit">
+      <div>
+        <span class="tag">${esc(o.secteur||'—')}${o.type_contrat?' · '+esc(o.type_contrat):''}${o.urgent?' · ⚡ à pourvoir rapidement':''}</span>
+        <h3>${esc(o.titre)}</h3>
+        <p class="meta">📍 ${esc(o.ville||'—')}</p>
+      </div>
+      <span class="arrow">→</span>
+    </a>`).join('');
+}
+init();
+</script>
+</body>
+</html>
